@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验一：互感现象 - 数字电压表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .main-container {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #999;
+        }
+
+        .content {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .voltmeter-container {
+            margin-bottom: 15px;
+        }
+
+        .voltage-display {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .voltage-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: #1a1a2e;
+            font-family: 'Courier New', monospace;
+        }
+
+        .voltage-unit {
+            font-size: 20px;
+            color: #666;
+            margin-left: 5px;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            width: 100%;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ccc;
+            margin-right: 8px;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #4cd964;
+            box-shadow: 0 0 8px rgba(76, 217, 100, 0.5);
+        }
+
+        .status-text {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-disconnect {
+            background: #ff3b30;
+            color: white;
+        }
+
+        .btn-disconnect:hover {
+            background: #ff2d20;
+        }
+
+        .btn-chart {
+            background: #34c759;
+            color: white;
+        }
+
+        .btn-chart:hover {
+            background: #30b350;
+        }
+
+        .btn-chart:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-download {
+            background: #ff9500;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #e68a00;
+        }
+
+        .btn-download:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .data-count {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+
+        .chart-section {
+            display: none;
+            flex: 1;
+            min-height: 300px;
+        }
+
+        .chart-section.show {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+
+        .chart-canvas-container {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 250px;
+        }
+
+        .info {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: #fff3cd;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <div class="title">互感现象实验</div>
+            <div class="subtitle">数字孪生电压表</div>
+        </div>
+
+        <div class="content">
+            <div class="left-panel">
+                <div class="voltmeter-container">
+                    <canvas id="voltmeterCanvas" width="260" height="260"></canvas>
+                </div>
+
+                <div class="voltage-display">
+                    <span class="voltage-value" id="voltageValue">0.00</span>
+                    <span class="voltage-unit">V</span>
+                </div>
+
+                <div class="status-bar">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span class="status-text" id="statusText">未连接</span>
+                </div>
+
+                <div class="data-count" id="dataCount">已记录: 0 个数据点</div>
+
+                <div class="btn-group">
+                    <button class="btn btn-connect" id="connectBtn" onclick="toggleConnect()">
+                        连接设备
+                    </button>
+                    <button class="btn btn-chart" id="chartBtn" onclick="showChart()" disabled>
+                        图表
+                    </button>
+                    <button class="btn btn-download" id="downloadBtn" onclick="downloadChart()" disabled>
+                        下载
+                    </button>
+                </div>
+
+                <div class="info">
+                    <strong>提示：</strong>Chrome 89+ 或 Edge 89+，蓝牙需开启
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="chart-section" id="chartSection">
+                    <div class="chart-header">
+                        <div class="chart-title">电压-时间曲线</div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="chartCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        // BLE 配置
+        const SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb';
+        const CHARACTERISTIC_UUID = '0000fff1-0000-1000-8000-00805f9b34fb';
+        
+        // Canvas 相关
+        let canvas, ctx;
+        let canvasWidth, canvasHeight;
+        
+        // 状态
+        let connected = false;
+        let device = null;
+        let characteristic = null;
+        let currentVoltage = 0;
+        let targetVoltage = 0;
+        
+        // 动画
+        let animationId = null;
+
+        // 数据记录
+        let voltageData = [];
+        let timeData = [];
+        let startTime = null;
+        let chart = null;
+
+        // 初始化
+        window.onload = function() {
+            initCanvas();
+            startAnimation();
+        };
+
+        // 初始化 Canvas
+        function initCanvas() {
+            canvas = document.getElementById('voltmeterCanvas');
+            ctx = canvas.getContext('2d');
+            canvasWidth = canvas.width;
+            canvasHeight = canvas.height;
+            drawVoltmeter(0);
+        }
+
+        // 绘制电压表（传统指针式风格）
+        function drawVoltmeter(voltage) {
+            const cx = canvasWidth / 2;
+            const cy = canvasHeight / 2;
+            const radius = Math.min(cx, cy) - 15;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // 外圈
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+            gradient.addColorStop(0, '#e8e8e8');
+            gradient.addColorStop(0.5, '#ffffff');
+            gradient.addColorStop(1, '#d0d0d0');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 内圈背景
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius - 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#fffde7';
+            ctx.fill();
+
+            // 刻度
+            const startAngle = Math.PI * 0.75;
+            const endAngle = Math.PI * 2.25;
+            const totalAngle = endAngle - startAngle;
+            const maxVoltage = 3.3;
+
+            for (let i = 0; i <= 10; i++) {
+                const angle = startAngle + (totalAngle * i / 10);
+                const isMain = i % 2 === 0;
+                const innerRadius = isMain ? radius - 28 : radius - 20;
+
+                ctx.beginPath();
+                ctx.moveTo(
+                    cx + innerRadius * Math.cos(angle),
+                    cy + innerRadius * Math.sin(angle)
+                );
+                ctx.lineTo(
+                    cx + (radius - 8) * Math.cos(angle),
+                    cy + (radius - 8) * Math.sin(angle)
+                );
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = isMain ? 2.5 : 1.5;
+                ctx.stroke();
+
+                if (isMain) {
+                    const textRadius = radius - 40;
+                    const text = (i * maxVoltage / 10).toFixed(1);
+                    ctx.save();
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(
+                        text,
+                        cx + textRadius * Math.cos(angle),
+                        cy + textRadius * Math.sin(angle)
+                    );
+                    ctx.restore();
+                }
+            }
+
+            // 标题
+            ctx.font = 'bold 11px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('VOLTAGE (V)', cx, cy - 15);
+
+            // 指针
+            const pointerAngle = startAngle + (totalAngle * Math.min(voltage, maxVoltage) / maxVoltage);
+            const pointerLength = radius - 50;
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(
+                cx + pointerLength * Math.cos(pointerAngle),
+                cy + pointerLength * Math.sin(pointerAngle)
+            );
+            ctx.strokeStyle = '#ff1744';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            ctx.restore();
+
+            // 中心点
+            const centerGradient = ctx.createRadialGradient(cx-1, cy-1, 0, cx, cy, 10);
+            centerGradient.addColorStop(0, '#ffffff');
+            centerGradient.addColorStop(0.5, '#cccccc');
+            centerGradient.addColorStop(1, '#999999');
+            ctx.beginPath();
+            ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+            ctx.fillStyle = centerGradient;
+            ctx.fill();
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // 动画循环
+        function startAnimation() {
+            function animate() {
+                currentVoltage += (targetVoltage - currentVoltage) * 0.15;
+                drawVoltmeter(currentVoltage);
+                document.getElementById('voltageValue').textContent = currentVoltage.toFixed(2);
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // 切换连接状态
+        function toggleConnect() {
+            if (connected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        }
+
+        // 连接 BLE 设备
+        async function connect() {
+            try {
+                updateStatus('搜索中...', false);
+                
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32-Voltmeter' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+                
+                updateStatus('连接中...', false);
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleData);
+                
+                voltageData = [];
+                timeData = [];
+                startTime = Date.now();
+                updateDataCount();
+                
+                connected = true;
+                updateStatus('已连接', true);
+                updateButton(true);
+                
+            } catch (error) {
+                console.error('连接失败:', error);
+                updateStatus('连接失败', false);
+            }
+        }
+
+        // 断开连接
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+            }
+            
+            connected = false;
+            targetVoltage = 0;
+            updateStatus('已断开', false);
+            updateButton(false);
+            
+            if (voltageData.length > 0) {
+                document.getElementById('chartBtn').disabled = false;
+                document.getElementById('downloadBtn').disabled = false;
+            }
+        }
+
+        // 处理数据
+        function handleData(event) {
+            const value = event.target.value;
+            const voltage = value.getFloat32(0, true);
+            
+            targetVoltage = voltage;
+            
+            const currentTime = (Date.now() - startTime) / 1000;
+            voltageData.push(voltage);
+            timeData.push(currentTime);
+            updateDataCount();
+        }
+
+        // 更新状态
+        function updateStatus(text, isConnected) {
+            document.getElementById('statusText').textContent = text;
+            const dot = document.getElementById('statusDot');
+            if (isConnected) {
+                dot.classList.add('connected');
+            } else {
+                dot.classList.remove('connected');
+            }
+        }
+
+        // 更新按钮
+        function updateButton(isConnected) {
+            const btn = document.getElementById('connectBtn');
+            if (isConnected) {
+                btn.textContent = '断开';
+                btn.className = 'btn btn-disconnect';
+            } else {
+                btn.textContent = '连接';
+                btn.className = 'btn btn-connect';
+            }
+        }
+
+        // 更新数据计数
+        function updateDataCount() {
+            document.getElementById('dataCount').textContent = `已记录: ${voltageData.length} 个数据点`;
+        }
+
+        // 显示图表
+        function showChart() {
+            if (voltageData.length === 0) {
+                alert('没有记录到数据');
+                return;
+            }
+
+            const section = document.getElementById('chartSection');
+            section.classList.add('show');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeData.map(t => t.toFixed(1) + 's'),
+                    datasets: [{
+                        label: '电压 (V)',
+                        data: voltageData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(3) + ' V';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '时间',
+                                font: { size: 12 }
+                            },
+                            ticks: {
+                                maxTicksLimit: 8,
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '电压 (V)',
+                                font: { size: 12 }
+                            },
+                            beginAtZero: true,
+                            max: 3.3,
+                            ticks: {
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        // 下载 xlsx 数据
+        function downloadChart() {
+            if (voltageData.length === 0) {
+                alert('没有记录到数据');
+                return;
+            }
+
+            // 创建工作簿
+            const wb = XLSX.utils.book_new();
+            
+            // 准备数据
+            const data = [
+                ['序号', '时间 (s)', '电压 (V)']
+            ];
+            
+            for (let i = 0; i < voltageData.length; i++) {
+                data.push([
+                    i + 1,
+                    parseFloat(timeData[i].toFixed(2)),
+                    parseFloat(voltageData[i].toFixed(4))
+                ]);
+            }
+
+            // 创建工作表
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // 设置列宽
+            ws['!cols'] = [
+                { wch: 10 },
+                { wch: 15 },
+                { wch: 15 }
+            ];
+
+            // 添加工作表到工作簿
+            XLSX.utils.book_append_sheet(wb, ws, '实验数据');
+
+            // 生成文件并下载
+            XLSX.writeFile(wb, '实验数据.xlsx');
+        }
+    </script>
+</body>
+</html>
