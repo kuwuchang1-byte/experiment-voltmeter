@@ -51,21 +51,14 @@
 
         .content {
             display: flex;
-            gap: 30px;
-            align-items: flex-start;
-        }
-
-        .left-panel {
-            flex: 1;
-            display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        .right-panel {
-            flex: 1;
+        .left-panel {
             display: flex;
             flex-direction: column;
+            align-items: center;
         }
 
         .voltmeter-container {
@@ -193,7 +186,8 @@
 
         .chart-section {
             display: none;
-            flex: 1;
+            width: 100%;
+            margin-top: 20px;
             min-height: 300px;
         }
 
@@ -275,14 +269,12 @@
                 </div>
             </div>
 
-            <div class="right-panel">
-                <div class="chart-section" id="chartSection">
-                    <div class="chart-header">
-                        <div class="chart-title">电压-时间曲线</div>
-                    </div>
-                    <div class="chart-canvas-container">
-                        <canvas id="chartCanvas"></canvas>
-                    </div>
+            <div class="chart-section" id="chartSection">
+                <div class="chart-header">
+                    <div class="chart-title">电压-时间曲线</div>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="chartCanvas"></canvas>
                 </div>
             </div>
         </div>
