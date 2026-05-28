@@ -3,8 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实验一：互感现象 - 数字电压表</title>
+    <title>互感现象实验 — 数字电压表</title>
+    <link rel="preconnect" href="https://fonts.loli.net">
+    <link href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0c0c0e;
+            --bg-secondary: #141418;
+            --bg-card: #1a1a1f;
+            --bg-elevated: #222228;
+            --border: #2a2a30;
+            --border-active: #3a3a42;
+            --text-primary: #e8e6e3;
+            --text-secondary: #8a8880;
+            --text-muted: #5a5850;
+            --accent: #c8a96e;
+            --accent-dim: #8a7548;
+            --accent-glow: rgba(200, 169, 110, 0.15);
+            --success: #4a9;
+            --success-glow: rgba(68, 170, 153, 0.2);
+            --danger: #c45;
+            --danger-glow: rgba(204, 68, 85, 0.2);
+            --warning: #c93;
+            --canvas-bg: #121214;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,270 +35,423 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        /* Subtle grid texture */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .main-container {
-            background: white;
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
             width: 100%;
-            max-width: 900px;
-            display: flex;
-            flex-direction: column;
+            max-width: 860px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 32px;
+            align-items: start;
         }
 
+        /* ── Header ── */
         .header {
-            text-align: center;
-            margin-bottom: 20px;
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
         }
 
         .title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #1a1a2e;
-            margin-bottom: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+
+        .title-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--accent-glow);
+            border: 1px solid var(--accent-dim);
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .subtitle {
-            font-size: 16px;
-            color: #999;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .content {
+        /* ── Voltmeter Panel ── */
+        .voltmeter-panel {
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 16px;
         }
 
-        .left-panel {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .voltmeter-frame {
+            background: var(--canvas-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            position: relative;
         }
 
-        .voltmeter-container {
-            margin-bottom: 15px;
+        .voltmeter-frame::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, rgba(200,169,110,0.1), transparent 50%);
+            z-index: -1;
+            pointer-events: none;
         }
 
-        .voltage-display {
+        #voltmeterCanvas {
+            display: block;
+        }
+
+        .voltage-readout {
             text-align: center;
-            margin-bottom: 15px;
         }
 
         .voltage-value {
-            font-size: 48px;
-            font-weight: bold;
-            color: #1a1a2e;
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 56px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            letter-spacing: -2px;
+            text-shadow: 0 0 30px var(--accent-glow);
         }
 
         .voltage-unit {
-            font-size: 20px;
-            color: #666;
-            margin-left: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--accent-dim);
+            margin-left: 4px;
         }
 
-        .status-bar {
+        /* ── Controls Panel ── */
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-top: 4px;
+        }
+
+        .panel-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .panel-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        /* Status */
+        .status-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            width: 100%;
+            gap: 10px;
         }
 
-        .status-dot {
-            width: 10px;
-            height: 10px;
+        .status-indicator {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: #ccc;
-            margin-right: 8px;
-            transition: background 0.3s;
+            background: var(--text-muted);
+            transition: all 0.4s ease;
         }
 
-        .status-dot.connected {
-            background: #4cd964;
-            box-shadow: 0 0 8px rgba(76, 217, 100, 0.5);
+        .status-indicator.connected {
+            background: var(--success);
+            box-shadow: 0 0 12px var(--success-glow), 0 0 4px var(--success);
         }
 
-        .status-text {
+        .status-label {
+            font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
-            color: #666;
+            color: var(--text-secondary);
         }
 
+        .status-label.connected {
+            color: var(--success);
+        }
+
+        /* Data counter */
+        .data-counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .data-counter span {
+            color: var(--text-secondary);
+        }
+
+        /* Buttons */
         .btn-group {
             display: flex;
-            gap: 10px;
-            width: 100%;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .btn {
-            flex: 1;
-            padding: 12px 16px;
-            font-size: 14px;
-            font-weight: bold;
-            border: none;
-            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-connect {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-connect:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-disconnect {
-            background: #ff3b30;
-            color: white;
-        }
-
-        .btn-disconnect:hover {
-            background: #ff2d20;
-        }
-
-        .btn-chart {
-            background: #34c759;
-            color: white;
-        }
-
-        .btn-chart:hover {
-            background: #30b350;
-        }
-
-        .btn-chart:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .btn-download {
-            background: #ff9500;
-            color: white;
-        }
-
-        .btn-download:hover {
-            background: #e68a00;
-        }
-
-        .btn-download:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .data-count {
+            transition: all 0.2s ease;
             text-align: center;
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
         }
 
+        .btn:hover {
+            border-color: var(--border-active);
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: #d4b87a;
+            border-color: #d4b87a;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-glow);
+        }
+
+        .btn-success {
+            background: transparent;
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .btn-success:hover {
+            background: var(--success-glow);
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn:disabled:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-row .btn {
+            flex: 1;
+        }
+
+        /* Hint */
+        .hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            border-left: 2px solid var(--border);
+        }
+
+        .hint strong {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ── Chart Section ── */
         .chart-section {
+            grid-column: 1 / -1;
             display: none;
-            width: 100%;
-            margin-top: 20px;
-            min-height: 300px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 4px;
         }
 
         .chart-section.show {
-            display: flex;
-            flex-direction: column;
+            display: block;
         }
 
         .chart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 16px;
         }
 
         .chart-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #1a1a2e;
-        }
-
-        .chart-canvas-container {
-            flex: 1;
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 15px;
-            min-height: 250px;
-        }
-
-        .info {
-            margin-top: 15px;
-            padding: 10px 15px;
-            background: #fff3cd;
-            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
-            color: #856404;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .chart-canvas-wrap {
+            background: var(--canvas-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            height: 240px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 20px;
+                gap: 20px;
+            }
+
+            .header {
+                flex-wrap: wrap;
+            }
+
+            .subtitle {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .voltage-value {
+                font-size: 44px;
+            }
+
+            .voltmeter-frame canvas {
+                width: 220px;
+                height: 220px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="main-container">
         <div class="header">
-            <div class="title">互感现象实验</div>
-            <div class="subtitle">数字孪生电压表</div>
+            <span class="title">互感现象实验</span>
+            <span class="title-badge">EXP.01</span>
+            <span class="subtitle">Wireless Power Transfer</span>
         </div>
 
-        <div class="content">
-            <div class="left-panel">
-                <div class="voltmeter-container">
-                    <canvas id="voltmeterCanvas" width="260" height="260"></canvas>
+        <div class="voltmeter-panel">
+            <div class="voltmeter-frame">
+                <canvas id="voltmeterCanvas" width="260" height="260"></canvas>
+            </div>
+            <div class="voltage-readout">
+                <span class="voltage-value" id="voltageValue">0.00</span>
+                <span class="voltage-unit">V</span>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="panel-section">
+                <div class="panel-label">Connection</div>
+                <div class="status-row">
+                    <div class="status-indicator" id="statusDot"></div>
+                    <span class="status-label" id="statusText">NOT CONNECTED</span>
                 </div>
+                <div class="data-counter">Recorded: <span id="dataCount">0</span> points</div>
+            </div>
 
-                <div class="voltage-display">
-                    <span class="voltage-value" id="voltageValue">0.00</span>
-                    <span class="voltage-unit">V</span>
-                </div>
-
-                <div class="status-bar">
-                    <div class="status-dot" id="statusDot"></div>
-                    <span class="status-text" id="statusText">未连接</span>
-                </div>
-
-                <div class="data-count" id="dataCount">已记录: 0 个数据点</div>
-
+            <div class="panel-section">
+                <div class="panel-label">Controls</div>
                 <div class="btn-group">
-                    <button class="btn btn-connect" id="connectBtn" onclick="toggleConnect()">
-                        连接设备
+                    <button class="btn btn-primary" id="connectBtn" onclick="toggleConnect()">
+                        CONNECT DEVICE
                     </button>
-                    <button class="btn btn-chart" id="chartBtn" onclick="showChart()" disabled>
-                        图表
-                    </button>
-                    <button class="btn btn-download" id="downloadBtn" onclick="downloadChart()" disabled>
-                        下载
-                    </button>
-                </div>
-
-                <div class="info">
-                    <strong>提示：</strong>Chrome 89+ 或 Edge 89+，蓝牙需开启
+                    <div class="btn-row">
+                        <button class="btn btn-success" id="chartBtn" onclick="showChart()" disabled>
+                            CHART
+                        </button>
+                        <button class="btn" id="downloadBtn" onclick="downloadChart()" disabled>
+                            EXPORT .XLSX
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="chart-section" id="chartSection">
-                <div class="chart-header">
-                    <div class="chart-title">电压-时间曲线</div>
-                </div>
-                <div class="chart-canvas-container">
-                    <canvas id="chartCanvas"></canvas>
-                </div>
+            <div class="hint">
+                <strong>Requirements:</strong> Chrome 89+ / Edge 89+, Bluetooth enabled on device.
+            </div>
+        </div>
+
+        <div class="chart-section" id="chartSection">
+            <div class="chart-header">
+                <div class="chart-title">Voltage vs Time</div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="chartCanvas"></canvas>
             </div>
         </div>
     </div>
@@ -283,37 +459,27 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script>
-        // BLE 配置
         const SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb';
         const CHARACTERISTIC_UUID = '0000fff1-0000-1000-8000-00805f9b34fb';
-        
-        // Canvas 相关
+
         let canvas, ctx;
         let canvasWidth, canvasHeight;
-        
-        // 状态
         let connected = false;
         let device = null;
         let characteristic = null;
         let currentVoltage = 0;
         let targetVoltage = 0;
-        
-        // 动画
         let animationId = null;
-
-        // 数据记录
         let voltageData = [];
         let timeData = [];
         let startTime = null;
         let chart = null;
 
-        // 初始化
         window.onload = function() {
             initCanvas();
             startAnimation();
         };
 
-        // 初始化 Canvas
         function initCanvas() {
             canvas = document.getElementById('voltmeterCanvas');
             ctx = canvas.getContext('2d');
@@ -322,120 +488,130 @@
             drawVoltmeter(0);
         }
 
-        // 绘制电压表（传统指针式风格）
         function drawVoltmeter(voltage) {
             const cx = canvasWidth / 2;
             const cy = canvasHeight / 2;
-            const radius = Math.min(cx, cy) - 15;
+            const radius = Math.min(cx, cy) - 12;
 
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-            // 外圈
+            // Outer ring
             ctx.beginPath();
             ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-            const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-            gradient.addColorStop(0, '#e8e8e8');
-            gradient.addColorStop(0.5, '#ffffff');
-            gradient.addColorStop(1, '#d0d0d0');
-            ctx.fillStyle = gradient;
+            const ringGrad = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+            ringGrad.addColorStop(0, '#2a2a2f');
+            ringGrad.addColorStop(0.5, '#3a3a40');
+            ringGrad.addColorStop(1, '#2a2a2f');
+            ctx.fillStyle = ringGrad;
             ctx.fill();
-            ctx.strokeStyle = '#999';
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
             ctx.stroke();
 
-            // 内圈背景
+            // Inner face
             ctx.beginPath();
-            ctx.arc(cx, cy, radius - 8, 0, Math.PI * 2);
-            ctx.fillStyle = '#fffde7';
+            ctx.arc(cx, cy, radius - 6, 0, Math.PI * 2);
+            const faceGrad = ctx.createRadialGradient(cx - 10, cy - 10, 0, cx, cy, radius - 6);
+            faceGrad.addColorStop(0, '#2a2a2e');
+            faceGrad.addColorStop(1, '#1a1a1e');
+            ctx.fillStyle = faceGrad;
             ctx.fill();
 
-            // 刻度
+            // Scale parameters
             const startAngle = Math.PI * 0.75;
             const endAngle = Math.PI * 2.25;
             const totalAngle = endAngle - startAngle;
             const maxVoltage = 3.3;
 
-            for (let i = 0; i <= 10; i++) {
-                const angle = startAngle + (totalAngle * i / 10);
-                const isMain = i % 2 === 0;
-                const innerRadius = isMain ? radius - 28 : radius - 20;
+            // Tick marks
+            for (let i = 0; i <= 33; i++) {
+                const angle = startAngle + (totalAngle * i / 33);
+                const isMajor = i % 3 === 0;
+                const outerR = radius - 8;
+                const innerR = isMajor ? radius - 24 : radius - 16;
 
                 ctx.beginPath();
-                ctx.moveTo(
-                    cx + innerRadius * Math.cos(angle),
-                    cy + innerRadius * Math.sin(angle)
-                );
-                ctx.lineTo(
-                    cx + (radius - 8) * Math.cos(angle),
-                    cy + (radius - 8) * Math.sin(angle)
-                );
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = isMain ? 2.5 : 1.5;
+                ctx.moveTo(cx + innerR * Math.cos(angle), cy + innerR * Math.sin(angle));
+                ctx.lineTo(cx + outerR * Math.cos(angle), cy + outerR * Math.sin(angle));
+                ctx.strokeStyle = isMajor ? '#999' : '#555';
+                ctx.lineWidth = isMajor ? 1.5 : 0.8;
                 ctx.stroke();
 
-                if (isMain) {
-                    const textRadius = radius - 40;
-                    const text = (i * maxVoltage / 10).toFixed(1);
+                // Major labels
+                if (isMajor) {
+                    const labelR = radius - 34;
+                    const val = (i / 33 * maxVoltage).toFixed(1);
                     ctx.save();
-                    ctx.font = 'bold 12px Arial';
-                    ctx.fillStyle = '#333';
+                    ctx.font = '600 11px "JetBrains Mono", monospace';
+                    ctx.fillStyle = '#bbb';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(
-                        text,
-                        cx + textRadius * Math.cos(angle),
-                        cy + textRadius * Math.sin(angle)
-                    );
+                    ctx.fillText(val, cx + labelR * Math.cos(angle), cy + labelR * Math.sin(angle));
                     ctx.restore();
                 }
             }
 
-            // 标题
-            ctx.font = 'bold 11px Arial';
-            ctx.fillStyle = '#666';
+            // Unit label
+            ctx.save();
+            ctx.font = '500 10px "JetBrains Mono", monospace';
+            ctx.fillStyle = '#888';
             ctx.textAlign = 'center';
-            ctx.fillText('VOLTAGE (V)', cx, cy - 15);
+            ctx.fillText('VOLTAGE', cx, cy + 20);
+            ctx.restore();
 
-            // 指针
-            const pointerAngle = startAngle + (totalAngle * Math.min(voltage, maxVoltage) / maxVoltage);
-            const pointerLength = radius - 50;
+            // Needle shadow
+            const needleAngle = startAngle + (totalAngle * Math.min(voltage, maxVoltage) / maxVoltage);
+            const needleLen = radius - 42;
+            const tailLen = 12;
 
             ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-
+            ctx.translate(1.5, 1.5);
+            ctx.globalAlpha = 0.3;
             ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(
-                cx + pointerLength * Math.cos(pointerAngle),
-                cy + pointerLength * Math.sin(pointerAngle)
-            );
-            ctx.strokeStyle = '#ff1744';
-            ctx.lineWidth = 2.5;
+            ctx.moveTo(cx - tailLen * Math.cos(needleAngle), cy - tailLen * Math.sin(needleAngle));
+            ctx.lineTo(cx + needleLen * Math.cos(needleAngle), cy + needleLen * Math.sin(needleAngle));
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
             ctx.lineCap = 'round';
             ctx.stroke();
             ctx.restore();
 
-            // 中心点
-            const centerGradient = ctx.createRadialGradient(cx-1, cy-1, 0, cx, cy, 10);
-            centerGradient.addColorStop(0, '#ffffff');
-            centerGradient.addColorStop(0.5, '#cccccc');
-            centerGradient.addColorStop(1, '#999999');
+            // Needle
+            const needleGrad = ctx.createLinearGradient(
+                cx - tailLen * Math.cos(needleAngle),
+                cy - tailLen * Math.sin(needleAngle),
+                cx + needleLen * Math.cos(needleAngle),
+                cy + needleLen * Math.sin(needleAngle)
+            );
+            needleGrad.addColorStop(0, '#8a3030');
+            needleGrad.addColorStop(0.3, '#cc4444');
+            needleGrad.addColorStop(1, '#ff5555');
+
             ctx.beginPath();
-            ctx.arc(cx, cy, 10, 0, Math.PI * 2);
-            ctx.fillStyle = centerGradient;
+            ctx.moveTo(cx - tailLen * Math.cos(needleAngle), cy - tailLen * Math.sin(needleAngle));
+            ctx.lineTo(cx + needleLen * Math.cos(needleAngle), cy + needleLen * Math.sin(needleAngle));
+            ctx.strokeStyle = needleGrad;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Center hub
+            const hubGrad = ctx.createRadialGradient(cx - 1, cy - 1, 0, cx, cy, 8);
+            hubGrad.addColorStop(0, '#555');
+            hubGrad.addColorStop(0.6, '#333');
+            hubGrad.addColorStop(1, '#222');
+            ctx.beginPath();
+            ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+            ctx.fillStyle = hubGrad;
             ctx.fill();
-            ctx.strokeStyle = '#666';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 0.5;
             ctx.stroke();
         }
 
-        // 动画循环
         function startAnimation() {
             function animate() {
-                currentVoltage += (targetVoltage - currentVoltage) * 0.15;
+                currentVoltage += (targetVoltage - currentVoltage) * 0.12;
                 drawVoltmeter(currentVoltage);
                 document.getElementById('voltageValue').textContent = currentVoltage.toFixed(2);
                 animationId = requestAnimationFrame(animate);
@@ -443,7 +619,6 @@
             animate();
         }
 
-        // 切换连接状态
         function toggleConnect() {
             if (connected) {
                 disconnect();
@@ -452,102 +627,98 @@
             }
         }
 
-        // 连接 BLE 设备
         async function connect() {
             try {
-                updateStatus('搜索中...', false);
-                
+                updateStatus('SEARCHING...', false);
+
                 device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'ESP32-Voltmeter' }],
                     optionalServices: [SERVICE_UUID]
                 });
-                
-                updateStatus('连接中...', false);
-                
+
+                updateStatus('CONNECTING...', false);
+
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-                
+
                 await characteristic.startNotifications();
                 characteristic.addEventListener('characteristicvaluechanged', handleData);
-                
+
                 voltageData = [];
                 timeData = [];
                 startTime = Date.now();
                 updateDataCount();
-                
+
                 connected = true;
-                updateStatus('已连接', true);
+                updateStatus('CONNECTED', true);
                 updateButton(true);
-                
+
             } catch (error) {
-                console.error('连接失败:', error);
-                updateStatus('连接失败', false);
+                console.error('Connection failed:', error);
+                updateStatus('CONNECTION FAILED', false);
             }
         }
 
-        // 断开连接
         function disconnect() {
             if (device && device.gatt.connected) {
                 device.gatt.disconnect();
             }
-            
+
             connected = false;
             targetVoltage = 0;
-            updateStatus('已断开', false);
+            updateStatus('DISCONNECTED', false);
             updateButton(false);
-            
+
             if (voltageData.length > 0) {
                 document.getElementById('chartBtn').disabled = false;
                 document.getElementById('downloadBtn').disabled = false;
             }
         }
 
-        // 处理数据
         function handleData(event) {
             const value = event.target.value;
             const voltage = value.getFloat32(0, true);
-            
+
             targetVoltage = voltage;
-            
+
             const currentTime = (Date.now() - startTime) / 1000;
             voltageData.push(voltage);
             timeData.push(currentTime);
             updateDataCount();
         }
 
-        // 更新状态
         function updateStatus(text, isConnected) {
             document.getElementById('statusText').textContent = text;
             const dot = document.getElementById('statusDot');
+            const label = document.getElementById('statusText');
             if (isConnected) {
                 dot.classList.add('connected');
+                label.classList.add('connected');
             } else {
                 dot.classList.remove('connected');
+                label.classList.remove('connected');
             }
         }
 
-        // 更新按钮
         function updateButton(isConnected) {
             const btn = document.getElementById('connectBtn');
             if (isConnected) {
-                btn.textContent = '断开';
-                btn.className = 'btn btn-disconnect';
+                btn.textContent = 'DISCONNECT';
+                btn.className = 'btn btn-danger';
             } else {
-                btn.textContent = '连接';
-                btn.className = 'btn btn-connect';
+                btn.textContent = 'CONNECT DEVICE';
+                btn.className = 'btn btn-primary';
             }
         }
 
-        // 更新数据计数
         function updateDataCount() {
-            document.getElementById('dataCount').textContent = `已记录: ${voltageData.length} 个数据点`;
+            document.getElementById('dataCount').textContent = voltageData.length;
         }
 
-        // 显示图表
         function showChart() {
             if (voltageData.length === 0) {
-                alert('没有记录到数据');
+                alert('No data recorded yet');
                 return;
             }
 
@@ -564,56 +735,63 @@
                 data: {
                     labels: timeData.map(t => t.toFixed(1) + 's'),
                     datasets: [{
-                        label: '电压 (V)',
+                        label: 'Voltage (V)',
                         data: voltageData,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        borderWidth: 2,
+                        borderColor: '#c8a96e',
+                        backgroundColor: 'rgba(200, 169, 110, 0.08)',
+                        borderWidth: 1.5,
                         fill: true,
-                        tension: 0.4,
+                        tension: 0.3,
                         pointRadius: 0,
-                        pointHoverRadius: 4
+                        pointHoverRadius: 3,
+                        pointHoverBackgroundColor: '#c8a96e'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
+                            backgroundColor: '#1a1a1f',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            titleFont: { family: 'JetBrains Mono', size: 11 },
+                            bodyFont: { family: 'JetBrains Mono', size: 11 },
+                            padding: 10,
                             callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y.toFixed(3) + ' V';
-                                }
+                                label: ctx => ctx.parsed.y.toFixed(3) + ' V'
                             }
                         }
                     },
                     scales: {
                         x: {
-                            display: true,
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                maxTicksLimit: 8
+                            },
                             title: {
                                 display: true,
-                                text: '时间',
-                                font: { size: 12 }
-                            },
-                            ticks: {
-                                maxTicksLimit: 8,
-                                font: { size: 10 }
+                                text: 'TIME',
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10, weight: 600 }
                             }
                         },
                         y: {
-                            display: true,
-                            title: {
-                                display: true,
-                                text: '电压 (V)',
-                                font: { size: 12 }
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10 }
                             },
                             beginAtZero: true,
                             max: 3.3,
-                            ticks: {
-                                font: { size: 10 }
+                            title: {
+                                display: true,
+                                text: 'VOLTAGE (V)',
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10, weight: 600 }
                             }
                         }
                     },
@@ -625,21 +803,15 @@
             });
         }
 
-        // 下载 xlsx 数据
         function downloadChart() {
             if (voltageData.length === 0) {
-                alert('没有记录到数据');
+                alert('No data recorded yet');
                 return;
             }
 
-            // 创建工作簿
             const wb = XLSX.utils.book_new();
-            
-            // 准备数据
-            const data = [
-                ['序号', '时间 (s)', '电压 (V)']
-            ];
-            
+            const data = [['No.', 'Time (s)', 'Voltage (V)']];
+
             for (let i = 0; i < voltageData.length; i++) {
                 data.push([
                     i + 1,
@@ -648,21 +820,10 @@
                 ]);
             }
 
-            // 创建工作表
             const ws = XLSX.utils.aoa_to_sheet(data);
-            
-            // 设置列宽
-            ws['!cols'] = [
-                { wch: 10 },
-                { wch: 15 },
-                { wch: 15 }
-            ];
-
-            // 添加工作表到工作簿
-            XLSX.utils.book_append_sheet(wb, ws, '实验数据');
-
-            // 生成文件并下载
-            XLSX.writeFile(wb, '实验数据.xlsx');
+            ws['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Data');
+            XLSX.writeFile(wb, 'experiment_data.xlsx');
         }
     </script>
 </body>
