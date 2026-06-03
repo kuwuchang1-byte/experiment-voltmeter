@@ -521,12 +521,12 @@
             const startAngle = Math.PI * 0.75;
             const endAngle = Math.PI * 2.25;
             const totalAngle = endAngle - startAngle;
-            const maxVoltage = 3.3;
+            const maxVoltage = 4.0;
 
             // Tick marks
-            for (let i = 0; i <= 33; i++) {
+            for (let i = 0; i <= 40; i++) {
                 const angle = startAngle + (totalAngle * i / 33);
-                const isMajor = i % 3 === 0;
+                const isMajor = i % 4 === 0;
                 const outerR = radius - 8;
                 const innerR = isMajor ? radius - 24 : radius - 16;
 
@@ -540,7 +540,7 @@
                 // Major labels
                 if (isMajor) {
                     const labelR = radius - 34;
-                    const val = (i / 33 * maxVoltage).toFixed(1);
+                    const val = (i / 40 * maxVoltage).toFixed(1);
                     ctx.save();
                     ctx.font = '600 11px "JetBrains Mono", monospace';
                     ctx.fillStyle = '#bbb';
@@ -786,7 +786,7 @@
                                 font: { family: 'JetBrains Mono', size: 10 }
                             },
                             beginAtZero: true,
-                            max: 3.3,
+                            max: 4.0,
                             title: {
                                 display: true,
                                 text: 'VOLTAGE (V)',
