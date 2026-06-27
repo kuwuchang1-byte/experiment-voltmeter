@@ -23,21 +23,12 @@
 #define ADS1115_GAIN GAIN_ONE  // +/- 4.096V 量程
 #define ADS1115_SDA 21
 #define ADS1115_SCL 22
-#define SAMPLE_COUNT 32   // 增加到32次采样取平均，抑制噪声
-#define FILTER_ALPHA 0.15 // 滑动滤波系数，越小越平滑
+#define SAMPLE_COUNT 16   // 16次采样取平均，抑制噪声
+#define FILTER_ALPHA 0.3   // 滤波系数，响应速度和稳定性之间的平衡点
 
 Adafruit_ADS1X15 ads;
 
-// ========== 校准数据（6点分段线性插值） ==========
-// ADS1115 线性度远好于内置ADC，偏移量已大幅减小
-// 标定方法：调节线圈间距，同时记录ADS1115读数和万用表读数
-#define CAL_POINTS 6
-const float cal_esp[CAL_POINTS] = {
-    0.258, 0.843, 1.485, 1.975, 2.405, 3.295
-};
-const float cal_real[CAL_POINTS] = {
-    0.26,  0.85,  1.49,  1.98,  2.41,  3.30
-};
+
 
 // BLE 对象
 BLEServer* pServer = NULL;
@@ -46,7 +37,7 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
 unsigned long lastSampleTime = 0;
-#define SAMPLE_INTERVAL 100
+#define SAMPLE_INTERVAL 100 // 100ms = 10Hz 更新率
 
 class MyServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) { deviceConnected = true; Serial.println("Connected"); }
@@ -64,8 +55,8 @@ void setup() {
         while (1) delay(1000);
     }
     ads.setGain(ADS1115_GAIN);  // +/- 4.096V
-    ads.setDataRate(RATE_ADS1115_8SPS);  // 8 SPS，最低噪声模式
-    Serial.println("ADS1115 OK, gain=1 (+/-4.096V), 8SPS low-noise");
+    ads.setDataRate(RATE_ADS1115_128SPS); // 128 SPS，低噪声且响应较快
+    Serial.println("ADS1115 OK, gain=1 (+/-4.096V), 128SPS");
 
     initBLE();
     Serial.println("BLE started, name: " + String(DEVICE_NAME));
@@ -79,7 +70,6 @@ void loop() {
         long sum = 0;
         for (int i = 0; i < SAMPLE_COUNT; i++) {
             sum += ads.readADC_SingleEnded(0);  // A0通道
-            delayMicroseconds(500);
         }
         float avgRaw = (float)sum / SAMPLE_COUNT;
 
@@ -90,44 +80,23 @@ void loop() {
         static float filteredVoltage = 0;
         filteredVoltage = filteredVoltage + FILTER_ALPHA * (rawVoltage - filteredVoltage);
 
-        // 校准
-        float calibrated = calibrate(filteredVoltage);
-
         if (deviceConnected) {
-            sendVoltage(calibrated);
+            sendVoltage(filteredVoltage);
         }
 
         Serial.print("Raw: ");
         Serial.print(avgRaw, 0);
         Serial.print(" | RawV: ");
         Serial.print(rawVoltage, 4);
-        Serial.print("V | Cal: ");
-        Serial.print(calibrated, 4);
+        Serial.print("V | Filtered: ");
+        Serial.print(filteredVoltage, 4);
         Serial.println("V");
     }
     handleConnection();
     delay(10);
 }
 
-// ========== 分段线性插值校准 ==========
-float calibrate(float v) {
-    if (v <= cal_esp[0]) {
-        float slope = (cal_real[1] - cal_real[0]) / (cal_esp[1] - cal_esp[0]);
-        return cal_real[0] + slope * (v - cal_esp[0]);
-    }
-    if (v >= cal_esp[CAL_POINTS - 1]) {
-        float slope = (cal_real[CAL_POINTS - 1] - cal_real[CAL_POINTS - 2])
-                    / (cal_esp[CAL_POINTS - 1] - cal_esp[CAL_POINTS - 2]);
-        return cal_real[CAL_POINTS - 1] + slope * (v - cal_esp[CAL_POINTS - 1]);
-    }
-    for (int i = 1; i < CAL_POINTS; i++) {
-        if (v <= cal_esp[i]) {
-            float t = (v - cal_esp[i - 1]) / (cal_esp[i] - cal_esp[i - 1]);
-            return cal_real[i - 1] + t * (cal_real[i] - cal_real[i - 1]);
-        }
-    }
-    return v;
-}
+
 
 void initBLE() {
     BLEDevice::init(DEVICE_NAME);

@@ -464,6 +464,7 @@
 
         let canvas, ctx;
         let canvasWidth, canvasHeight;
+        let bgCanvas, bgCtx; // 离屏背景缓存
         let connected = false;
         let device = null;
         let characteristic = null;
@@ -474,6 +475,11 @@
         let timeData = [];
         let startTime = null;
         let chart = null;
+        // 指针动画参数
+        const NEEDLE_START = Math.PI * 0.75;
+        const NEEDLE_END = Math.PI * 2.25;
+        const NEEDLE_TOTAL = NEEDLE_END - NEEDLE_START;
+        const MAX_VOLTAGE = 4.0;
 
         window.onload = function() {
             initCanvas();
@@ -485,85 +491,96 @@
             ctx = canvas.getContext('2d');
             canvasWidth = canvas.width;
             canvasHeight = canvas.height;
-            drawVoltmeter(0);
+            // 构建离屏背景（只画一次）
+            buildBackground();
+            // 首帧绘制
+n            drawNeedle(0);
         }
 
-        function drawVoltmeter(voltage) {
+        // === 离屏绘制静态背景（只执行一次） ===
+        function buildBackground() {
+            bgCanvas = document.createElement('canvas');
+            bgCanvas.width = canvasWidth;
+            bgCanvas.height = canvasHeight;
+            bgCtx = bgCanvas.getContext('2d');
+
             const cx = canvasWidth / 2;
             const cy = canvasHeight / 2;
             const radius = Math.min(cx, cy) - 12;
 
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
             // Outer ring
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-            const ringGrad = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+            bgCtx.beginPath();
+            bgCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            const ringGrad = bgCtx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
             ringGrad.addColorStop(0, '#2a2a2f');
             ringGrad.addColorStop(0.5, '#3a3a40');
             ringGrad.addColorStop(1, '#2a2a2f');
-            ctx.fillStyle = ringGrad;
-            ctx.fill();
-            ctx.strokeStyle = '#444';
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            bgCtx.fillStyle = ringGrad;
+            bgCtx.fill();
+            bgCtx.strokeStyle = '#444';
+            bgCtx.lineWidth = 1;
+            bgCtx.stroke();
 
             // Inner face
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius - 6, 0, Math.PI * 2);
-            const faceGrad = ctx.createRadialGradient(cx - 10, cy - 10, 0, cx, cy, radius - 6);
+            bgCtx.beginPath();
+            bgCtx.arc(cx, cy, radius - 6, 0, Math.PI * 2);
+            const faceGrad = bgCtx.createRadialGradient(cx - 10, cy - 10, 0, cx, cy, radius - 6);
             faceGrad.addColorStop(0, '#2a2a2e');
             faceGrad.addColorStop(1, '#1a1a1e');
-            ctx.fillStyle = faceGrad;
-            ctx.fill();
-
-            // Scale parameters
-            const startAngle = Math.PI * 0.75;
-            const endAngle = Math.PI * 2.25;
-            const totalAngle = endAngle - startAngle;
-            const maxVoltage = 4.0;
+            bgCtx.fillStyle = faceGrad;
+            bgCtx.fill();
 
             // Tick marks
             for (let i = 0; i <= 40; i++) {
-                const angle = startAngle + (totalAngle * i / 40);
+                const angle = NEEDLE_START + (NEEDLE_TOTAL * i / 40);
                 const isMajor = i % 4 === 0;
                 const outerR = radius - 8;
                 const innerR = isMajor ? radius - 24 : radius - 16;
 
-                ctx.beginPath();
-                ctx.moveTo(cx + innerR * Math.cos(angle), cy + innerR * Math.sin(angle));
-                ctx.lineTo(cx + outerR * Math.cos(angle), cy + outerR * Math.sin(angle));
-                ctx.strokeStyle = isMajor ? '#999' : '#555';
-                ctx.lineWidth = isMajor ? 1.5 : 0.8;
-                ctx.stroke();
+                bgCtx.beginPath();
+                bgCtx.moveTo(cx + innerR * Math.cos(angle), cy + innerR * Math.sin(angle));
+                bgCtx.lineTo(cx + outerR * Math.cos(angle), cy + outerR * Math.sin(angle));
+                bgCtx.strokeStyle = isMajor ? '#999' : '#555';
+                bgCtx.lineWidth = isMajor ? 1.5 : 0.8;
+                bgCtx.stroke();
 
-                // Major labels
                 if (isMajor) {
                     const labelR = radius - 34;
-                    const val = (i / 40 * maxVoltage).toFixed(1);
-                    ctx.save();
-                    ctx.font = '600 11px "JetBrains Mono", monospace';
-                    ctx.fillStyle = '#bbb';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(val, cx + labelR * Math.cos(angle), cy + labelR * Math.sin(angle));
-                    ctx.restore();
+                    const val = (i / 40 * MAX_VOLTAGE).toFixed(1);
+                    bgCtx.save();
+                    bgCtx.font = '600 11px "JetBrains Mono", monospace';
+                    bgCtx.fillStyle = '#bbb';
+                    bgCtx.textAlign = 'center';
+                    bgCtx.textBaseline = 'middle';
+                    bgCtx.fillText(val, cx + labelR * Math.cos(angle), cy + labelR * Math.sin(angle));
+                    bgCtx.restore();
                 }
             }
 
             // Unit label
-            ctx.save();
-            ctx.font = '500 10px "JetBrains Mono", monospace';
-            ctx.fillStyle = '#888';
-            ctx.textAlign = 'center';
-            ctx.fillText('VOLTAGE', cx, cy + 20);
-            ctx.restore();
+            bgCtx.save();
+            bgCtx.font = '500 10px "JetBrains Mono", monospace';
+            bgCtx.fillStyle = '#888';
+            bgCtx.textAlign = 'center';
+            bgCtx.fillText('VOLTAGE', cx, cy + 20);
+            bgCtx.restore();
+        }
 
-            // Needle shadow
-            const needleAngle = startAngle + (totalAngle * Math.min(voltage, maxVoltage) / maxVoltage);
+        // === 只画指针（每帧调用，极轻量） ===
+        function drawNeedle(voltage) {
+            const cx = canvasWidth / 2;
+            const cy = canvasHeight / 2;
+            const radius = Math.min(cx, cy) - 12;
             const needleLen = radius - 42;
             const tailLen = 12;
 
+            // 贴背景
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.drawImage(bgCanvas, 0, 0);
+
+            const needleAngle = NEEDLE_START + (NEEDLE_TOTAL * Math.min(voltage, MAX_VOLTAGE) / MAX_VOLTAGE);
+
+            // Needle shadow
             ctx.save();
             ctx.translate(1.5, 1.5);
             ctx.globalAlpha = 0.3;
@@ -611,8 +628,8 @@
 
         function startAnimation() {
             function animate() {
-                currentVoltage += (targetVoltage - currentVoltage) * 0.12;
-                drawVoltmeter(currentVoltage);
+                currentVoltage += (targetVoltage - currentVoltage) * 0.25;
+                drawNeedle(currentVoltage);
                 document.getElementById('voltageValue').textContent = currentVoltage.toFixed(2);
                 animationId = requestAnimationFrame(animate);
             }
