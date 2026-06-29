@@ -23,12 +23,10 @@
 #define ADS1115_GAIN GAIN_ONE  // +/- 4.096V 量程
 #define ADS1115_SDA 21
 #define ADS1115_SCL 22
-#define SAMPLE_COUNT 16   // 16次采样取平均，抑制噪声
-#define FILTER_ALPHA 0.3   // 滤波系数，响应速度和稳定性之间的平衡点
+#define SAMPLE_COUNT 8    // 8次采样取平均
+#define FILTER_ALPHA 0.4  // 滤波系数，适度平滑
 
 Adafruit_ADS1X15 ads;
-
-
 
 // BLE 对象
 BLEServer* pServer = NULL;
@@ -37,7 +35,7 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
 unsigned long lastSampleTime = 0;
-#define SAMPLE_INTERVAL 100 // 100ms = 10Hz 更新率
+#define SAMPLE_INTERVAL 100
 
 class MyServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) { deviceConnected = true; Serial.println("Connected"); }
@@ -55,8 +53,8 @@ void setup() {
         while (1) delay(1000);
     }
     ads.setGain(ADS1115_GAIN);  // +/- 4.096V
-    ads.setDataRate(RATE_ADS1115_128SPS); // 128 SPS，低噪声且响应较快
-    Serial.println("ADS1115 OK, gain=1 (+/-4.096V), 128SPS");
+    ads.setDataRate(RATE_ADS1115_250SPS); // 250 SPS
+    Serial.println("ADS1115 OK, gain=1 (+/-4.096V), 250SPS");
 
     initBLE();
     Serial.println("BLE started, name: " + String(DEVICE_NAME));
@@ -76,7 +74,7 @@ void loop() {
         // ADS1115: 16bit, gain=1 → 满量程4.096V
         float rawVoltage = (avgRaw / 32767.0) * 4.096;
 
-        // 一阶低通滤波，抑制跳变和毛刺
+        // 低通滤波
         static float filteredVoltage = 0;
         filteredVoltage = filteredVoltage + FILTER_ALPHA * (rawVoltage - filteredVoltage);
 
@@ -88,12 +86,11 @@ void loop() {
         Serial.print(avgRaw, 0);
         Serial.print(" | RawV: ");
         Serial.print(rawVoltage, 4);
-        Serial.print("V | Filtered: ");
+        Serial.print(" | Filt: ");
         Serial.print(filteredVoltage, 4);
         Serial.println("V");
     }
     handleConnection();
-    delay(10);
 }
 
 
