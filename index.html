@@ -8,24 +8,24 @@
     <link href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0c0c0e;
-            --bg-secondary: #141418;
-            --bg-card: #1a1a1f;
-            --bg-elevated: #222228;
-            --border: #2a2a30;
-            --border-active: #3a3a42;
-            --text-primary: #e8e6e3;
-            --text-secondary: #8a8880;
-            --text-muted: #5a5850;
-            --accent: #c8a96e;
-            --accent-dim: #8a7548;
-            --accent-glow: rgba(200, 169, 110, 0.15);
-            --success: #4a9;
-            --success-glow: rgba(68, 170, 153, 0.2);
-            --danger: #c45;
-            --danger-glow: rgba(204, 68, 85, 0.2);
-            --warning: #c93;
-            --canvas-bg: #121214;
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #e8eef4;
+            --bg-card: #ffffff;
+            --bg-elevated: #f8fafc;
+            --border: #d0d8e4;
+            --border-active: #b0c4de;
+            --text-primary: #1a2a3a;
+            --text-secondary: #4a6a8a;
+            --text-muted: #8899aa;
+            --accent: #2563eb;
+            --accent-dim: #1d4ed8;
+            --accent-glow: rgba(37, 99, 235, 0.08);
+            --success: #059669;
+            --success-glow: rgba(5, 150, 105, 0.1);
+            --danger: #dc2626;
+            --danger-glow: rgba(220, 38, 38, 0.1);
+            --warning: #d97706;
+            --canvas-bg: #ffffff;
         }
 
         * {
@@ -52,8 +52,8 @@
             position: fixed;
             inset: 0;
             background-image:
-                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+                linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
             background-size: 40px 40px;
             pointer-events: none;
             z-index: 0;
@@ -133,7 +133,7 @@
             position: absolute;
             inset: -1px;
             border-radius: 9px;
-            background: linear-gradient(135deg, rgba(200,169,110,0.1), transparent 50%);
+            background: linear-gradient(135deg, rgba(37, 99, 235,0.1), transparent 50%);
             z-index: -1;
             pointer-events: none;
         }
@@ -600,7 +600,7 @@
                 cx + needleLen * Math.cos(needleAngle),
                 cy + needleLen * Math.sin(needleAngle)
             );
-            needleGrad.addColorStop(0, '#8a3030');
+            needleGrad.addColorStop(0, '#1e40af');
             needleGrad.addColorStop(0.3, '#cc4444');
             needleGrad.addColorStop(1, '#ff5555');
 
@@ -615,7 +615,7 @@
             // Center hub
             const hubGrad = ctx.createRadialGradient(cx - 1, cy - 1, 0, cx, cy, 8);
             hubGrad.addColorStop(0, '#555');
-            hubGrad.addColorStop(0.6, '#333');
+            hubGrad.addColorStop(0.6, '#64748b');
             hubGrad.addColorStop(1, '#222');
             ctx.beginPath();
             ctx.arc(cx, cy, 8, 0, Math.PI * 2);
@@ -783,7 +783,7 @@
                     },
                     scales: {
                         x: {
-                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            grid: { color: 'rgba(0,0,0,0.06)' },
                             ticks: {
                                 color: '#555',
                                 font: { family: 'JetBrains Mono', size: 10 },
@@ -797,7 +797,7 @@
                             }
                         },
                         y: {
-                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            grid: { color: 'rgba(0,0,0,0.06)' },
                             ticks: {
                                 color: '#555',
                                 font: { family: 'JetBrains Mono', size: 10 }
